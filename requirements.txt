@@ -1,0 +1,26 @@
+# Utilities
+python-dotenv
+
+# Loaders
+pypdf
+pymupdf
+beautifulsoup4
+requests
+youtube-transcript-api
+pytube
+arxiv
+
+# LangChain (light)
+langchain
+langchain-community
+langchain-text-splitters
+langchain_core
+
+#for llms and embeddings
+langchain-groq
+langchain-huggingface
+langchain_chroma
+chromadb
+
+streamlit
+sentence-transformers

@@ -1,0 +1,22 @@
+# Credentials and Secrets
+.env
+
+# Environments
+venv/
+env/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Streamlit
+.streamlit/
+
+# Vector Database (Local Storage)
+chroma_db/
+
+# OS specific
+.DS_Store
+Thumbs.db
