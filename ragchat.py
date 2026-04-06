@@ -10,20 +10,36 @@ from langchain_community.document_loaders import (
 
 #for loading documents from url
 def load_from_url(url: str) -> List[Document]:
-    loader = WebBaseLoader(
-        web_paths = (url,),
-        bs_kwargs = dict(
-            parse_only = bs4.SoupStrainer(
-                name=["article","main","p","h1","h2","h3","li"]
-            )
-        ),
-    )
-    docs = loader.load()
+    from langchain_community.document_loaders import PyPDFLoader
     
-    for doc in docs:
-        doc.metadata["source_type"]="url"
-        doc.metadata["display_name"]=url
-    return docs
+    # 1. Handle PDF links
+    if url.lower().endswith(".pdf"):
+        loader = PyPDFLoader(url)
+    else:
+        # 2. Add the User-Agent header to bypass blocks
+        loader = WebBaseLoader(
+            web_paths=(url,),
+            header_template={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36',
+            }
+        )
+        # Note: I removed bs_kwargs temporarily to ensure we get ALL text first. 
+        # If this works, you can add the SoupStrainer back later.
+
+    try:
+        docs = loader.load()
+        
+        # Check if we actually got content
+        if not docs or all(not d.page_content.strip() for d in docs):
+            return []
+
+        for doc in docs:
+            doc.metadata["source_type"] = "pdf" if url.lower().endswith(".pdf") else "url"
+            doc.metadata["display_name"] = url
+        return docs
+    except Exception as e:
+        print(f"Error loading URL: {e}")
+        return []
 
 from pathlib import Path
 #for loading documents from pdf
