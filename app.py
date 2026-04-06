@@ -4,11 +4,12 @@ import streamlit as st
 from pathlib import Path
 from dotenv import load_dotenv
 
-
-import ragchat 
-
-
 load_dotenv()
+import ragchat 
+os.environ['LANGCHAIN_API_KEY'] = os.getenv("LANGCHAIN_API_KEY","") 
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "RAG_CHAT_DEMO")
+
 
 
 st.set_page_config(
@@ -44,7 +45,6 @@ st.markdown("""
 
 def get_engine():
     if "engine" not in st.session_state:
-        # Use keys from .env if available, otherwise from sidebar
         groq_key = st.session_state.get("groq_key") or os.getenv("GROQ_API_KEY")
         hf_token = st.session_state.get("hf_token") or os.getenv("HF_TOKEN")
         
@@ -57,7 +57,6 @@ def get_engine():
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
 
 with st.sidebar:
     st.title("⚙️ Control Panel")
@@ -75,23 +74,29 @@ with st.sidebar:
     st.subheader("Add Knowledge")
     tabs = st.tabs(["🌐 URL", "📄 PDF", "✍️ Text", "📺 YT", "📁 TXT"])
 
-    # URL
+    # URL - Added empty check
     with tabs[0]:
         url_in = st.text_input("Web URL")
         if st.button("Ingest URL") and url_in:
             docs = ragchat.load_from_url(url_in)
-            get_engine().add_source(docs)
-            st.success("URL Loaded!")
+            if docs:
+                get_engine().add_source(docs)
+                st.success("URL Loaded!")
+            else:
+                st.error("Could not extract text from this URL.")
 
-    # PDF
+    # PDF - Added empty check
     with tabs[1]:
         pdf_in = st.file_uploader("Upload PDF", type="pdf")
         if st.button("Ingest PDF") and pdf_in:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                 tmp.write(pdf_in.read())
                 docs = ragchat.load_from_pdf(tmp.name, pdf_in.name)
-                get_engine().add_source(docs)
-            st.success("PDF Loaded!")
+                if docs:
+                    get_engine().add_source(docs)
+                    st.success("PDF Loaded!")
+                else:
+                    st.error("PDF is empty or unreadable.")
 
     # Manual Text
     with tabs[2]:
@@ -101,13 +106,19 @@ with st.sidebar:
             get_engine().add_source(docs)
             st.success("Text Loaded!")
 
-    # YouTube
+    # YouTube - Added empty check
     with tabs[3]:
         yt_url = st.text_input("YouTube Link")
         if st.button("Ingest Video") and yt_url:
-            docs = ragchat.load_from_youtube(yt_url)
-            get_engine().add_source(docs)
-            st.success("Transcript Loaded!")
+            try:
+                docs = ragchat.load_from_youtube(yt_url)
+                if docs:
+                    get_engine().add_source(docs)
+                    st.success("Transcript Loaded!")
+                else:
+                    st.error("No transcript found for this video.")
+            except Exception as e:
+                st.error(f"YouTube Error: {e}")
 
     # TXT File
     with tabs[4]:
@@ -115,14 +126,12 @@ with st.sidebar:
         if st.button("Ingest TXT") and txt_file:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as tmp:
                 tmp.write(txt_file.read())
-                # Using the specific name from your ragchat.py file
                 docs = ragchat.load_from_text_file(tmp.name, txt_file.name)
-                # Check if docs is None (fixing the missing return in your original file)
                 if docs:
                     get_engine().add_source(docs)
                     st.success("File Loaded!")
                 else:
-                    st.error("Error: load_from_text_file returned nothing. Check your engine code.")
+                    st.error("Text file is empty.")
 
 # Main Chat UI
 st.title("💬 RAG Intelligence")
